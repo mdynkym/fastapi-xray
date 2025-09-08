@@ -16,7 +16,7 @@ from app.core.hotspot import fetch_hot_topics
 from app.core.blog import render_blog_html, write_blog, write_news_pages
 
 PUBLIC_DIR = os.path.join(FILE_PATH, "public")
-
+os.makedirs(PUBLIC_DIR, exist_ok=True)
 
 def check_xray():
     print("\n--- Xray 启动检测 ---")
@@ -115,7 +115,6 @@ def startup_event():
         ensure_directory()
         clean_old_files()
 
-        os.makedirs(PUBLIC_DIR, exist_ok=True)
         build_and_publish_blog()
 
         generate_config()
