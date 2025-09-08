@@ -115,6 +115,7 @@ def startup_event():
         ensure_directory()
         clean_old_files()
 
+        os.makedirs(PUBLIC_DIR, exist_ok=True)
         build_and_publish_blog()
 
         generate_config()
