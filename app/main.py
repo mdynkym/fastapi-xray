@@ -16,7 +16,6 @@ from app.core.hotspot import fetch_hot_topics
 from app.core.blog import render_blog_html, write_blog, write_news_pages
 
 PUBLIC_DIR = os.path.join(FILE_PATH, "public")
-os.makedirs(PUBLIC_DIR, exist_ok=True)
 
 def check_xray():
     print("\n--- Xray 启动检测 ---")
@@ -92,8 +91,6 @@ def build_and_publish_blog():
 
 app = FastAPI()
 
-# 挂载静态文件
-app.mount("/static", StaticFiles(directory=PUBLIC_DIR), name="static")
 
 # 路由注册
 from app.api import news, sub
@@ -112,6 +109,18 @@ def index():
 @app.on_event("startup")
 def startup_event():
     try:
+
+        # 目录创建异常处理
+        try:
+            os.makedirs(PUBLIC_DIR, exist_ok=True)
+        except OSError as e:
+            print(f"[警告] 无法创建静态目录 {PUBLIC_DIR}: {e}")
+            print("[警告] 只读文件系统，部分功能将不可用。")
+            return
+        
+        # 挂载静态文件
+        app.mount("/static", StaticFiles(directory=PUBLIC_DIR), name="static")
+
         ensure_directory()
         clean_old_files()
 
