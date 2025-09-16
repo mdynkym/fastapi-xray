@@ -3,13 +3,14 @@ import time
 import subprocess
 
 from .config import FILE_PATH, ENABLE_ARGO, ARGO_TOKEN
-from .utils import download_xray, download_cloudflared
+from .utils import download_xray, download_cloudflared, download_caddy
 
 
 def run_xray():
     """后台启动 Xray 核心"""
     bin_path = os.path.join(FILE_PATH, 'xray')
-    cmd = f"nohup {bin_path} -c {os.path.join(FILE_PATH,'config.json')} >/dev/null 2>&1 &"
+    conf_path = os.path.join(FILE_PATH, 'config.json')
+    cmd = f"nohup {bin_path} -c {conf_path} >/dev/null 2>&1 &"
     subprocess.Popen(cmd, shell=True)
     time.sleep(1)
     print("Xray 已启动")
@@ -23,18 +24,35 @@ def run_cloudflared():
         f"nohup {bin_path} tunnel --loglevel warn --logfile {log}  run --protocol http2 --token {ARGO_TOKEN} "
     )
     subprocess.Popen(cmd, shell=True)
+    time.sleep(1)
     print(f"cloudflared 隧道启动中，日志写入：{log}")
 
 
-def authorize_and_run():
+def run_caddy():
+    """
+    启动 caddy 进程
+    """
+    caddy_path = os.path.join(FILE_PATH, "caddy")
+    caddyfile_path = os.path.join(FILE_PATH, "Caddyfile")
+    subprocess.Popen([caddy_path, "run", "--config", caddyfile_path])
+    time.sleep(1)
+    print("Caddy 已启动")
+
+
+def download_and_run():
     """
     1. 下载并授权 xray 与 cloudflared
     2. 启动 Xray；如启用 Argo，则启动 cloudflared
     """
     download_xray()
+
+    download_caddy()
+
     if ENABLE_ARGO and ARGO_TOKEN:
         download_cloudflared()
 
     run_xray()
     if ENABLE_ARGO and ARGO_TOKEN:
         run_cloudflared()
+
+    run_caddy()

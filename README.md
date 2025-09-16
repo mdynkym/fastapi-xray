@@ -9,7 +9,6 @@ app/
 ├── main.py         # FastAPI 应用入口
 ├── api/            # 路由模块
 ├── core/           # 业务逻辑/工具
-├── static/         # 静态文件
 ```
 
 ## 快速启动

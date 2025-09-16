@@ -5,17 +5,18 @@ import subprocess
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from contextlib import asynccontextmanager
 
-from app.core.config import FILE_PATH, ENABLE_ARGO, PORT, SUB_PATH
-from app.core.utils import ensure_directory, clean_old_files
-from app.core.xray import generate_config, XRAY_PORT
-from app.core.runner import authorize_and_run
+from app.core.config import FILE_PATH, ENABLE_ARGO, PORT, SUB_PATH, PUBLIC_DIR, XRAY_PORT
+from app.core.utils import clean_old_config, generate_caddyfile, generate_xray_config
+from app.core.runner import download_and_run
 from app.core.links import generate_subscription
+
 from app.core.meta import get_cf_meta, summarize_meta
 from app.core.hotspot import fetch_hot_topics
 from app.core.blog import render_blog_html, write_blog, write_news_pages
+from app.api import news, sub
 
-PUBLIC_DIR = os.path.join(FILE_PATH, "public")
 
 def check_xray():
     print("\n--- Xray 启动检测 ---")
@@ -89,48 +90,21 @@ def build_and_publish_blog():
     print(f"博客已生成：{path}")
 
 
-app = FastAPI()
-
-
-# 路由注册
-from app.api import news, sub
-app.include_router(news.router, prefix="/api/news")
-app.include_router(sub.router)
-
-# 首页和博客页面
-@app.get("/")
-def index():
-    fp = os.path.join(PUBLIC_DIR, "index.html")
-    if os.path.exists(fp):
-        return FileResponse(fp, media_type="text/html")
-    return {"detail": "Blog not found"}
-
-# 启动初始化逻辑（可用事件或单独脚本）
-@app.on_event("startup")
-def startup_event():
+# 启动初始化逻辑
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     try:
+        clean_old_config()
 
-        # 目录创建异常处理
-        try:
-            os.makedirs(PUBLIC_DIR, exist_ok=True)
-        except OSError as e:
-            print(f"[警告] 无法创建静态目录 {PUBLIC_DIR}: {e}")
-            print("[警告] 只读文件系统，部分功能将不可用。")
-            return
-        
-        # 挂载静态文件
-        app.mount("/static", StaticFiles(directory=PUBLIC_DIR), name="static")
+        print("\n--- 生成配置文件 ---")
+        generate_caddyfile()
+        generate_xray_config()
 
-        ensure_directory()
-        clean_old_files()
+        # 启动 Xray / cloudflared / caddy
+        download_and_run()
 
         build_and_publish_blog()
-
-        generate_config()
-
-        # 启动 Xray / cloudflared
-        authorize_and_run()
-
+        
         time.sleep(3)  # 给进程一点时间启动
 
         # 检测 Xray
@@ -148,6 +122,36 @@ def startup_event():
         print(f"(如启用令牌则需附加)?token=***")
     except Exception as e:
         print(f"[启动异常] {e}")
+
+    yield
+    # Clean and release the resources
+    print(f"服务已终止")
+
+
+app = FastAPI(title="FastAPI Demo",
+              version="1.5.0",
+              lifespan=lifespan,
+              openapi_url=None,
+              docs_url=None,
+              redoc_url=None)
+
+# 挂载静态文件
+app.mount("/static", StaticFiles(directory=PUBLIC_DIR), name="static")
+
+# 路由注册
+app.include_router(news.router, prefix="/api/news")
+app.include_router(sub.router)
+
+
+# 首页和博客页面
+@app.get("/")
+def index():
+    fp = os.path.join(PUBLIC_DIR, "index.html")
+    if os.path.exists(fp):
+        return FileResponse(fp, media_type="text/html")
+
+    return {"detail": "Blog not found"}
+
 
 # 运行方式（如使用 uvicorn 启动）
 # uvicorn app.main:app --host 0.0.0.0 --port 3000
