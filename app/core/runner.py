@@ -34,7 +34,13 @@ def run_caddy():
     """
     caddy_path = os.path.join(FILE_PATH, "caddy")
     caddyfile_path = os.path.join(FILE_PATH, "Caddyfile")
-    subprocess.Popen([caddy_path, "run", "--config", caddyfile_path])
+
+    # 构建环境变量字典（基于当前环境）
+    env = os.environ.copy()
+    env["XDG_CONFIG_HOME"] = os.path.join(FILE_PATH, "caddy_config")
+    env["XDG_DATA_HOME"] = os.path.join(FILE_PATH, "caddy_data")
+
+    subprocess.Popen([caddy_path, "run", "--config", caddyfile_path], env=env)
     time.sleep(1)
     print("Caddy 已启动")
 

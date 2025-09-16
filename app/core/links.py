@@ -26,7 +26,7 @@ def generate_subscription():
     # 拼接 xhttp 链接
     xhttp_uri = (f"vless://{UUID}@{link_host}:443"
                  f"?encryption=none&security=tls&sni={host}"
-                 f"&fp=chrome&type=ws&host={host}"
+                 f"&fp=chrome&type=xhttp&host={host}"
                  f"&path={XHTTP_PATH}&headerType=http"
                  f"#VLESS-{isp}-XHTTP")
     uri = ws_uri + '\n' + xhttp_uri

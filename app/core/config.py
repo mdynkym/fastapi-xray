@@ -34,7 +34,7 @@ if not UUID:
     UUID = str(uuid.uuid4())
     print(f"[提示] 未配置 UUID，已自动生成: {UUID}")
 
-XRAY_PORT = int(os.environ.get('XRAY_PORT', '11086'))
+XRAY_PORT = int(os.environ.get('XRAY_PORT', '10086'))
 DOMAIN = os.environ.get('DOMAIN', '')
 
 FAKE_SNI = os.environ.get('FAKE_SNI', '')
